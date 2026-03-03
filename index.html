@@ -158,6 +158,11 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 <div id="btOverlay"></div>
 <div id="btAnnounce"><div style="text-align:center"><div class="bt-text">BULLET TIME</div><div class="bt-sub">Время замедлено!</div></div></div>
 <div id="hint">ЛКМ — стрелять · ПКМ+тянуть — вращение · Скролл — зум · R — рестарт</div>
+<div id="contextLostOverlay" style="position:fixed;inset:0;background:rgba(5,5,20,.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+  <div style="color:rgba(255,120,80,.95);font-size:18px;font-weight:700;margin-bottom:8px">Игра прервана</div>
+  <div style="color:rgba(180,200,240,.8);font-size:14px;margin-bottom:16px">Нехватка памяти в браузере.<br>Обнови страницу, чтобы продолжить.</div>
+  <button class="btn-sm" onclick="location.reload()">ОБНОВИТЬ СТРАНИЦУ</button>
+</div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -278,9 +283,11 @@ let killTimes=[],score=0,comboN=0,comboT=0;
 const S={shots:0,hits:0,kills:0,bestCombo:0,triples:0};
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
 renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
+let webglLost=false;
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();webglLost=true;const el=document.getElementById('contextLostOverlay');el.style.display='flex';});
 
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x050510);scene.fog=new THREE.FogExp2(0x050510,.008);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);camera.position.set(0,5,35);
@@ -315,7 +322,9 @@ const shardGeos=[new THREE.TetrahedronGeometry(1,0),new THREE.OctahedronGeometry
 const meteorGeo=new THREE.DodecahedronGeometry(1,1);
 const boltGeo=(()=>{const g=new THREE.CylinderGeometry(PROJ_R*.6,PROJ_R*.3,.8,6);g.rotateX(Math.PI/2);return g;})();
 const boltMat=new THREE.MeshBasicMaterial({color:0xff4444});
-const MAX_SHARDS=80,MAX_TRAILS=30;
+const isMobile=/Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>0&&innerWidth<900);
+const isTG=!!window.Telegram?.WebApp;
+const MAX_SHARDS=isMobile||isTG?45:80,MAX_TRAILS=isMobile||isTG?18:30,MAX_SHOCKWAVES=isMobile||isTG?8:14,MAX_FLASHES=isMobile||isTG?6:12;
 
 const gV=`varying vec3 vN,vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
 const gF=`uniform vec3 uC;uniform float uO;varying vec3 vN,vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float r=smoothstep(0.,1.,f);vec3 c=uC+vec3(.5)*r;float a=mix(.03,uO,r);gl_FragColor=vec4(c,a);}`;
@@ -380,7 +389,9 @@ function explode(b,hv){
   const shardCount=Math.min(SHARD_N,Math.max(4,MAX_SHARDS-shards.length));
   for(let i=0;i<shardCount;i++){const sr=r*(.15+Math.random()*.25);const geo=shardGeos[Math.floor(Math.random()*shardGeos.length)];const mat=new THREE.MeshStandardMaterial({color:b.color.clone().offsetHSL(Math.random()*.1-.05,0,Math.random()*.2-.1),roughness:.3,metalness:.2,transparent:true,opacity:.85,emissive:b.color.clone(),emissiveIntensity:2});const mesh=new THREE.Mesh(geo,mat);mesh.scale.setScalar(sr);mesh.position.copy(pos);scene.add(mesh);const dir=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize();const speed=8+Math.random()*14;const body=new CANNON.Body({mass:sr*sr*.5,shape:new CANNON.Sphere(sr*.6),position:new CANNON.Vec3(pos.x,pos.y,pos.z),material:sM,linearDamping:.15,angularDamping:.3});body.velocity.set(dir.x*speed+(hv?hv.x*.25:0),dir.y*speed+(hv?hv.y*.25:0),dir.z*speed+(hv?hv.z*.25:0));body.angularVelocity.set((Math.random()-.5)*15,(Math.random()-.5)*15,(Math.random()-.5)*15);world.addBody(body);shards.push({mesh,body,life:2.5+Math.random()*1.5,mat});}
   while(shards.length>MAX_SHARDS){const s=shards.shift();scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}
+  while(shockwaves.length>=MAX_SHOCKWAVES){const o=shockwaves.shift();scene.remove(o.mesh);o.geo.dispose();o.mat.dispose();}
   const sg=new THREE.RingGeometry(.1,.3,48);const sm=new THREE.MeshBasicMaterial({color:b.color,transparent:true,opacity:.7,side:THREE.DoubleSide});const smesh=new THREE.Mesh(sg,sm);smesh.position.copy(pos);smesh.lookAt(camera.position);scene.add(smesh);shockwaves.push({mesh:smesh,mat:sm,geo:sg,maxR:r*3,t:0});
+  while(flashes.length>=MAX_FLASHES){const o=flashes.shift();scene.remove(o.l);}
   const fl=new THREE.PointLight(b.color,15,25);fl.position.copy(pos);scene.add(fl);flashes.push({l:fl,life:.4});
   for(const ob of bubbles){if(!ob.alive||ob===b)continue;const d=ob.body.position.distanceTo(new CANNON.Vec3(pos.x,pos.y,pos.z));if(d<r*6){const dir=new CANNON.Vec3();ob.body.position.vsub(new CANNON.Vec3(pos.x,pos.y,pos.z),dir);dir.normalize();dir.scale(Math.max(0,1-d/(r*6))*30,dir);ob.body.applyImpulse(dir);}}
 }
@@ -417,7 +428,9 @@ function hitMeteor(m){
   const pos=m.mesh.position.clone();scene.remove(m.mesh);world.removeBody(m.body);m.mat.dispose();m.life=-1;
   const vp=pos.clone().project(camera);popupAt((vp.x*.5+.5)*innerWidth,(-vp.y*.5+.5)*innerHeight,'meteor','METEOR +200');addScore(200);
   for(const b of bubbles){if(!b.alive)continue;const d=b.body.position.distanceTo(new CANNON.Vec3(pos.x,pos.y,pos.z));if(d<5){b.hp--;drawHp(b.hpB,b.hp,b.maxHp);if(b.hp<=0){addScore(b.pts);S.kills++;explode(b,{x:0,y:5,z:0});}else{const dir=new CANNON.Vec3();b.body.position.vsub(new CANNON.Vec3(pos.x,pos.y,pos.z),dir);dir.normalize();dir.scale(20,dir);b.body.applyImpulse(dir);}}}
+  while(shockwaves.length>=MAX_SHOCKWAVES){const o=shockwaves.shift();scene.remove(o.mesh);o.geo.dispose();o.mat.dispose();}
   const sg=new THREE.RingGeometry(.1,.3,48);const sm=new THREE.MeshBasicMaterial({color:0xff8844,transparent:true,opacity:.7,side:THREE.DoubleSide});const smesh=new THREE.Mesh(sg,sm);smesh.position.copy(pos);smesh.lookAt(camera.position);scene.add(smesh);shockwaves.push({mesh:smesh,mat:sm,geo:sg,maxR:6,t:0});
+  while(flashes.length>=MAX_FLASHES){const o=flashes.shift();scene.remove(o.l);}
   const fl=new THREE.PointLight(0xff6600,20,30);fl.position.copy(pos);scene.add(fl);flashes.push({l:fl,life:.5});
 }
 
@@ -444,7 +457,7 @@ function updateTimer(){const left=Math.max(0,GAME_TIME-gTimer);timerEl.textConte
 
 const startScreen=document.getElementById('startScreen'),goScreen=document.getElementById('gameOverScreen'),waveAnn=document.getElementById('waveAnnounce'),wvName=document.getElementById('waveName'),wvSub=document.getElementById('waveSub');
 
-function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);world.removeBody(b.body);b.alive=false;}bubbles.length=0;for(const p of projectiles){scene.remove(p.mesh);world.removeBody(p.body);}projectiles.length=0;for(const s of shards){scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}shards.length=0;for(const m of meteors){if(m.life>0){scene.remove(m.mesh);world.removeBody(m.body);m.mat.dispose();}}meteors.length=0;for(const d of deadTrails){scene.remove(d.line);d.mat.dispose();d.geo.dispose();}deadTrails.length=0;}
+function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);world.removeBody(b.body);b.alive=false;}bubbles.length=0;for(const p of projectiles){scene.remove(p.mesh);world.removeBody(p.body);}projectiles.length=0;for(const s of shards){scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}shards.length=0;for(const m of meteors){if(m.life>0){scene.remove(m.mesh);world.removeBody(m.body);m.mat.dispose();}}meteors.length=0;for(const d of deadTrails){scene.remove(d.line);d.mat.dispose();d.geo.dispose();}deadTrails.length=0;for(const sw of shockwaves){scene.remove(sw.mesh);sw.geo.dispose();sw.mat.dispose();}shockwaves.length=0;for(const f of flashes){scene.remove(f.l);}flashes.length=0;}
 
 function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');lbScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
 function announceWave(idx){wIdx=idx;gState='waveAnnounce';announceT=3;const names=['WAVE 1','WAVE 2','FINAL WAVE'];const subs=['Разминка','Золотые цели','Красные бомбы. Берегись метеоритов!'];wvName.textContent=names[idx]||'WAVE';wvSub.textContent=subs[idx]||'';waveAnn.classList.add('show');waveEl.textContent=idx+1;}
@@ -489,6 +502,7 @@ const clock=new THREE.Clock();
 
 function animate(){
   requestAnimationFrame(animate);
+  if(webglLost)return;
   let dt=Math.min(clock.getDelta(),.05);const t=clock.elapsedTime;orbit.update();
   let ts=1;if(gState==='bulletTime'){ts=.3;bloom.strength=.6;scene.fog.color.lerp(new THREE.Color(0x120828),.05);scene.background.lerp(new THREE.Color(0x0a0420),.05);}else{bloom.strength=.35;if(gState==='playing'){scene.fog.color.lerp(new THREE.Color(0x050510),.08);scene.background.lerp(new THREE.Color(0x050510),.08);}}
   const gdt=dt*ts;
