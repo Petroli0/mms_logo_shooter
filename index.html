@@ -26,7 +26,7 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 #startScreen{background:rgba(5,5,16,.85);padding:20px 16px;text-align:center}
 #startScreen .logo{font-size:48px;font-weight:900;letter-spacing:.15em;color:rgba(200,220,255,.95);text-shadow:0 0 40px rgba(80,120,255,.4);margin-bottom:8px}
 #startScreen .sub{font-size:14px;color:rgba(130,160,220,.5);letter-spacing:.2em;margin-bottom:16px}
-.version{font-size:11px;color:rgba(100,130,180,.4);letter-spacing:.08em;margin-top:20px}
+.version{font-size:11px;color:rgba(100,130,180,.4);letter-spacing:.08em;margin-top:20px;padding:12px 8px;min-height:20px;-webkit-tap-highlight-color:transparent}
 #startScreen .player-info{color:rgba(160,200,255,.7);font-size:14px;margin-bottom:24px}
 #startScreen .player-info b{color:rgba(200,230,255,.95)}
 #nickWrap{margin-bottom:24px;display:flex;gap:8px;justify-content:center;align-items:center}
@@ -161,6 +161,7 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 <div id="btOverlay"></div>
 <div id="btAnnounce"><div style="text-align:center"><div class="bt-text">BULLET TIME</div><div class="bt-sub">Время замедлено!</div></div></div>
 <div id="hint">ЛКМ — стрелять · ПКМ+тянуть — вращение · Скролл — зум · R — рестарт</div>
+<div id="debugLog" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:100px;overflow-y:auto;background:rgba(0,0,0,.75);color:#0f0;font:10px monospace;padding:4px;pointer-events:none;z-index:999;"></div>
 <div id="contextLostOverlay" style="position:fixed;inset:0;background:rgba(5,5,20,.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
   <div style="color:rgba(255,120,80,.95);font-size:18px;font-weight:700;margin-bottom:8px">Игра прервана</div>
   <div style="color:rgba(180,200,240,.8);font-size:14px;margin-bottom:16px">Нехватка памяти в браузере.<br>Обнови страницу, чтобы продолжить.</div>
@@ -280,10 +281,10 @@ document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagatio
 document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
 document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
-const GAME_VERSION='1.0.3';
+const GAME_VERSION='1.0.4';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=12,GAME_TIME=120,BT_START=110;
-document.getElementById('gameVersion').textContent='ver. '+GAME_VERSION;
+var gameVersionEl=document.getElementById('gameVersion');if(gameVersionEl){gameVersionEl.textContent='ver. '+GAME_VERSION;var _tapCount=0,_tapT=0,_debugCooldown=0;function _onVersionTap(){var t=Date.now();if(t<_debugCooldown)return;if(t-_tapT>600)_tapCount=0;_tapT=t;_tapCount++;if(_tapCount>=3){_debugOnPage=true;_tapCount=0;_debugCooldown=t+2000;var dl=document.getElementById('debugLog');if(dl){dl.style.display='block';dl.innerHTML='';}gameVersionEl.textContent='Лог ВКЛ!';setTimeout(function(){gameVersionEl.textContent='ver. '+GAME_VERSION;},2000);if(typeof _log==='function')_log('debug_on',{msg:'лог включён'});}}gameVersionEl.addEventListener('touchstart',function(e){e.preventDefault();_onVersionTap();},{passive:false});gameVersionEl.addEventListener('click',_onVersionTap);}
 const WAVES=[
   {t:0,dur:40,normal:20,gold:0,red:0,metInt:5,grav:-1.5,spd:3,spawnR:14},
   {t:40,dur:40,normal:20,gold:5,red:0,metInt:3,grav:-2.5,spd:5,spawnR:20},
@@ -427,7 +428,11 @@ function checkWaveClear(){const alive=bubbles.filter(b=>b.alive).length;if(alive
 const raycaster=new THREE.Raycaster(),mouseNDC=new THREE.Vector2();
 
 function shoot(mx,my){
-  if(gState!=='playing'&&gState!=='bulletTime')return;S.shots++;
+  // #region agent log
+  if(gState!=='playing'&&gState!=='bulletTime'){_log('shoot_early_return',{gState});return;}
+  _log('shoot_ok',{mx,my});
+  // #endregion
+  S.shots++;
   mouseNDC.set((mx/innerWidth)*2-1,-(my/innerHeight)*2+1);raycaster.setFromCamera(mouseNDC,camera);
   const dir=raycaster.ray.direction.clone().normalize();const pos=camera.position.clone().add(dir.clone().multiplyScalar(2));
   const mesh=new THREE.Mesh(boltGeo,boltMat);mesh.position.copy(pos);mesh.lookAt(pos.clone().add(dir));scene.add(mesh);
@@ -477,7 +482,7 @@ function checkHits(){
 }
 
 const scoreEl=document.getElementById('scoreVal'),ballEl=document.getElementById('ballCount'),timerEl=document.getElementById('timerVal'),waveEl=document.getElementById('waveVal'),comboEl=document.getElementById('combo'),hudEl=document.getElementById('hud');
-function addScore(pts){comboN++;comboT=2;const m=Math.min(comboN,8);score+=pts*m;scoreEl.textContent=score;if(comboN>S.bestCombo)S.bestCombo=comboN;if(m>1){comboEl.textContent=`x${m} COMBO!`;comboEl.classList.add('show');}if(m>=4)shakeAmt=Math.max(shakeAmt,.3);}
+function addScore(pts){comboN++;comboT=2;const m=Math.min(comboN,8);score+=pts*m;scoreEl.textContent=score;if(comboN>S.bestCombo)S.bestCombo=comboN;if(m>1){comboEl.textContent=`x${m} COMBO!`;comboEl.classList.add('show');}if(m>=4)shakeAmt=Math.max(shakeAmt,.3);/* #region agent log */_log('addScore',{pts,comboN,m,scoreAfter:score});/* #endregion */}
 function updateBallCount(){ballEl.textContent=bubbles.filter(b=>b.alive).length;}
 function updateTimer(){const left=Math.max(0,GAME_TIME-gTimer);timerEl.textContent=`${Math.floor(left/60)}:${String(Math.floor(left%60)).padStart(2,'0')}`;}
 
@@ -487,7 +492,7 @@ function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);wor
 
 function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');lbScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
 function announceWave(idx){wIdx=idx;gState='waveAnnounce';announceT=3;const names=['WAVE 1','WAVE 2','FINAL WAVE'];const subs=['Разминка','Золотые цели','Красные бомбы. Берегись метеоритов!'];wvName.textContent=names[idx]||'WAVE';wvSub.textContent=subs[idx]||'';waveAnn.classList.add('show');waveEl.textContent=idx+1;}
-function spawnWave(idx){const w=WAVES[idx];if(!w)return;world.gravity.set(0,w.grav,0);for(let i=0;i<w.normal;i++)spawnBubble('normal');for(let i=0;i<w.gold;i++)spawnBubble('gold');for(let i=0;i<w.red;i++)spawnBubble('red');updateBallCount();}
+function spawnWave(idx){const w=WAVES[idx];if(!w)return;world.gravity.set(0,w.grav,0);for(let i=0;i<w.normal;i++)spawnBubble('normal');for(let i=0;i<w.gold;i++)spawnBubble('gold');for(let i=0;i<w.red;i++)spawnBubble('red');updateBallCount();/* #region agent log */_log('spawnWave',{idx,totalBubbles:bubbles.length});/* #endregion */}
 const ACC_RANKS=[{min:80,label:'Легенда!'},{min:60,label:'Снайпер!'},{min:40,label:'Хороший стрелок!'},{min:25,label:'Неплохо!'},{min:0,label:'Тренируй прицел!'}];
 function endGame(){
   gState='gameOver';
@@ -511,10 +516,22 @@ function endGame(){
   document.getElementById('goTotal').textContent=`ИТОГО: ${total.toLocaleString('ru')}`;
   document.getElementById('goStats').innerHTML=[['Уничтожено шаров',S.kills],['Выстрелов',S.shots],['Попаданий',S.hits],['Точность',acc+'%'],['Лучший Combo','x'+S.bestCombo],['Triple Kills',S.triples]].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join('');
   registerPlayer();saveScore(total,acc);
+  /* #region agent log */_log('endGame',{total,acc,kills:S.kills,shots:S.shots});/* #endregion */
 }
 
-document.addEventListener('mousedown',e=>{if(e.button===0)shoot(e.clientX,e.clientY);});
-document.addEventListener('touchstart',e=>{if(e.touches.length===1){const t=e.touches[0];shoot(t.clientX,t.clientY);}},{passive:true});
+// #region agent log
+var _debugOnPage=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('debug')==='1');
+function _log(msg,data){
+  var pl={sessionId:'1d613e',location:'index.html:input',message:msg,data:data||{},timestamp:Date.now()};
+  fetch('http://127.0.0.1:7305/ingest/4a407548-291a-4561-9bd3-ff9c97f9c7d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d613e'},body:JSON.stringify(pl)}).catch(()=>{});
+  if(_debugOnPage){
+    var el=document.getElementById('debugLog');
+    if(el){el.style.display='block';var line=msg+' '+JSON.stringify(data);el.appendChild(document.createTextNode(line+'\n'));var kids=el.childNodes;while(kids.length>25)el.removeChild(kids[0]);}
+  }
+}
+// #endregion
+document.addEventListener('mousedown',e=>{if(e.button===0){_log('mousedown',{clientX:e.clientX,clientY:e.clientY,gState});shoot(e.clientX,e.clientY);}});
+document.addEventListener('touchstart',e=>{_log('touchstart',{touchesLen:e.touches.length,gState});if(e.touches.length===1){const t=e.touches[0];shoot(t.clientX,t.clientY);}},{passive:true});
 document.getElementById('playBtn').addEventListener('click',e=>{
   e.stopPropagation();
   if(!userId){const v=nickInput.value.trim()||'Anonymous';localStorage.setItem('mms_nick',v);userId='web_'+v;userName=v;}
