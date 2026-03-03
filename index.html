@@ -2,8 +2,9 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>MMS Logo Shooter</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;cursor:crosshair;user-select:none}
@@ -24,7 +25,30 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 .screen-overlay.hidden{opacity:0;pointer-events:none}
 #startScreen{background:rgba(5,5,16,.85);padding:20px 16px;text-align:center}
 #startScreen .logo{font-size:48px;font-weight:900;letter-spacing:.15em;color:rgba(200,220,255,.95);text-shadow:0 0 40px rgba(80,120,255,.4);margin-bottom:8px}
-#startScreen .sub{font-size:14px;color:rgba(130,160,220,.5);letter-spacing:.2em;margin-bottom:40px}
+#startScreen .sub{font-size:14px;color:rgba(130,160,220,.5);letter-spacing:.2em;margin-bottom:16px}
+#startScreen .player-info{color:rgba(160,200,255,.7);font-size:14px;margin-bottom:24px}
+#startScreen .player-info b{color:rgba(200,230,255,.95)}
+#nickWrap{margin-bottom:24px;display:flex;gap:8px;justify-content:center;align-items:center}
+#nickWrap input{background:rgba(20,30,60,.7);border:1px solid rgba(100,140,220,.25);border-radius:8px;padding:10px 14px;color:rgba(220,240,255,.9);font-size:14px;width:180px;outline:none;text-align:center;font-family:inherit}
+#nickWrap input::placeholder{color:rgba(100,130,200,.4)}
+#nickWrap input:focus{border-color:rgba(100,140,220,.5)}
+.btn-sm{background:linear-gradient(135deg,rgba(50,70,180,.6),rgba(100,50,180,.6));border:1px solid rgba(120,150,230,.25);border-radius:8px;padding:10px 20px;color:rgba(200,220,255,.9);font-size:13px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:transform .15s}
+.btn-sm:hover{transform:scale(1.04)}
+#lbScreen{position:fixed;inset:0;background:rgba(5,5,16,.92);z-index:55;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:20px 16px;transition:opacity .4s}
+#lbScreen.hidden{opacity:0;pointer-events:none}
+#lbScreen .lb-title{font-size:28px;font-weight:900;color:rgba(200,220,255,.9);letter-spacing:.1em;margin-bottom:4px}
+.lb-global{color:rgba(130,160,220,.5);font-size:12px;margin-bottom:16px;letter-spacing:.05em}
+.lb-section{font-size:14px;font-weight:700;color:rgba(170,200,255,.7);margin:12px 0 6px;letter-spacing:.05em}
+.lb-table{width:100%;max-width:420px;border-collapse:collapse;margin-bottom:8px}
+.lb-table th{color:rgba(110,140,200,.5);font-size:11px;font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid rgba(100,140,220,.12)}
+.lb-table td{color:rgba(200,220,255,.8);font-size:13px;padding:5px 6px;border-bottom:1px solid rgba(100,140,220,.06)}
+.lb-table tr.me td{color:rgba(100,220,255,.95);font-weight:700}
+.lb-table .rank{width:28px;text-align:center;color:rgba(140,170,220,.5);font-weight:700}
+.lb-table .rank.gold{color:rgba(255,210,80,.9)}
+.lb-table .rank.silver{color:rgba(190,200,220,.8)}
+.lb-table .rank.bronze{color:rgba(200,150,100,.8)}
+.lb-empty{color:rgba(120,150,200,.35);font-size:13px;font-style:italic;margin:8px 0}
+.lb-btns{display:flex;gap:10px;margin-top:16px}
 .btn{background:linear-gradient(135deg,rgba(60,90,220,.7),rgba(120,60,220,.7));border:1px solid rgba(140,170,255,.3);border-radius:12px;padding:14px 48px;color:#fff;font-size:16px;font-weight:700;letter-spacing:.12em;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(100,140,255,.4)}
 #gameOverScreen{background:rgba(5,5,16,.88);overflow-y:auto;padding:20px 16px}
@@ -74,6 +98,9 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
   #btAnnounce .bt-text{font-size:32px;letter-spacing:.1em}
   #btAnnounce .bt-sub{font-size:12px}
   .dmg.hit{font-size:16px}.dmg.kill{font-size:20px}.dmg.triple{font-size:22px}.dmg.waveclear{font-size:20px}.dmg.meteor{font-size:18px}
+  #lbScreen .lb-title{font-size:22px}
+  .lb-table td{font-size:12px}
+  #nickWrap input{width:140px;font-size:13px;padding:8px 10px}
 }
 .dmg{position:fixed;pointer-events:none;z-index:20;font-weight:800;text-shadow:0 0 8px currentColor;transition:transform .8s ease-out,opacity .8s ease-out}
 .dmg.fade{transform:translateY(-36px)!important;opacity:0}
@@ -96,8 +123,38 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 <div id="combo"></div>
 <div id="waveAnnounce"><div><div class="wtitle" id="waveName"></div><div class="wsub" id="waveSub"></div></div></div>
 <div id="loading"><div class="title">ЗАГРУЗКА</div><div class="bar"><div class="fill" id="loadFill"></div></div></div>
-<div class="screen-overlay" id="startScreen"><div class="logo">MMS LOGO SHOOTER</div><div class="sub">3D BUBBLE SHOOTER</div><div class="btn" id="playBtn">ИГРАТЬ</div></div>
-<div class="screen-overlay hidden" id="gameOverScreen"><div class="go-title">GAME OVER</div><div class="go-base" id="goBase"></div><div class="go-score" id="goScore">0</div><div class="go-bonus" id="goBonus"></div><div class="go-total" id="goTotal"></div><div class="stats" id="goStats"></div><div class="btn" id="replayBtn">ИГРАТЬ СНОВА</div></div>
+<div class="screen-overlay" id="startScreen">
+  <div class="logo">MMS LOGO SHOOTER</div>
+  <div class="sub">3D BUBBLE SHOOTER</div>
+  <div class="player-info" id="playerInfo"></div>
+  <div id="nickWrap" style="display:none"><input id="nickInput" placeholder="Введи ник" maxlength="20"><button class="btn-sm" id="nickSave">OK</button></div>
+  <div class="btn" id="playBtn">ИГРАТЬ</div>
+  <div style="margin-top:16px"><button class="btn-sm" id="lbBtnStart">ЛИДЕРБОРД</button></div>
+</div>
+<div class="screen-overlay hidden" id="gameOverScreen">
+  <div class="go-title">GAME OVER</div>
+  <div class="go-base" id="goBase"></div>
+  <div class="go-score" id="goScore">0</div>
+  <div class="go-bonus" id="goBonus"></div>
+  <div class="go-total" id="goTotal"></div>
+  <div class="stats" id="goStats"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <div class="btn" id="replayBtn">ИГРАТЬ СНОВА</div>
+    <button class="btn-sm" id="lbBtnGO" style="padding:14px 24px;font-size:14px">ЛИДЕРБОРД</button>
+  </div>
+</div>
+<div id="lbScreen" class="hidden">
+  <div class="lb-title">ЛИДЕРБОРД</div>
+  <div class="lb-global" id="lbGlobal"></div>
+  <div class="lb-section">ТОП-15</div>
+  <table class="lb-table" id="lbTop"></table>
+  <div class="lb-section" id="lbMyTitle" style="display:none">МОИ ПОСЛЕДНИЕ 5 ИГР</div>
+  <table class="lb-table" id="lbMy"></table>
+  <div class="lb-btns">
+    <button class="btn-sm" id="lbRefresh">ОБНОВИТЬ</button>
+    <button class="btn-sm" id="lbClose">ЗАКРЫТЬ</button>
+  </div>
+</div>
 <div id="btOverlay"></div>
 <div id="btAnnounce"><div style="text-align:center"><div class="bt-text">BULLET TIME</div><div class="bt-sub">Время замедлено!</div></div></div>
 <div id="hint">ЛКМ — стрелять · ПКМ+тянуть — вращение · Скролл — зум · R — рестарт</div>
@@ -109,6 +166,104 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import * as CANNON from 'cannon-es';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import {getFirestore,collection,addDoc,doc,setDoc,getDoc,getDocs,query,orderBy,limit,where,increment} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+// ═══ FIREBASE ════════════════════════════════════════════════════════════════
+const fbApp=initializeApp({apiKey:"AIzaSyCM1q9NKfc0GnkwIwS4OQ0XkyLIB7XOMQk",authDomain:"mms-logo-shooter.firebaseapp.com",projectId:"mms-logo-shooter",storageBucket:"mms-logo-shooter.firebasestorage.app",messagingSenderId:"203671063531",appId:"1:203671063531:web:baffac4bd0249d23a227ae"});
+const db=getFirestore(fbApp);
+
+// ═══ TELEGRAM + AUTH ═════════════════════════════════════════════════════════
+const tg=window.Telegram?.WebApp;
+if(tg){tg.ready();tg.expand();}
+const tgUser=tg?.initDataUnsafe?.user;
+
+let userId='',userName='';
+const piEl=document.getElementById('playerInfo');
+const nickWrap=document.getElementById('nickWrap');
+const nickInput=document.getElementById('nickInput');
+
+if(tgUser){
+  userId='tg_'+tgUser.id;
+  userName=tgUser.first_name+(tgUser.last_name?' '+tgUser.last_name:'');
+  piEl.innerHTML=`Привет, <b>${userName}</b>!`;
+}else{
+  const saved=localStorage.getItem('mms_nick');
+  if(saved){userId='web_'+saved;userName=saved;piEl.innerHTML=`Игрок: <b>${saved}</b>`;nickWrap.style.display='flex';nickInput.value=saved;}
+  else{nickWrap.style.display='flex';piEl.textContent='Введи ник для лидерборда';}
+}
+
+document.getElementById('nickSave').addEventListener('click',()=>{
+  const v=nickInput.value.trim();if(!v)return;
+  localStorage.setItem('mms_nick',v);userId='web_'+v;userName=v;
+  piEl.innerHTML=`Игрок: <b>${v}</b>`;
+});
+nickInput.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('nickSave').click();});
+
+async function registerPlayer(){
+  if(!userId)return;
+  try{
+    const pRef=doc(db,'players',userId);
+    const snap=await getDoc(pRef);
+    if(!snap.exists()){
+      await setDoc(pRef,{name:userName,firstSeen:Date.now()});
+      await setDoc(doc(db,'meta','counters'),{totalPlayers:increment(1)},{merge:true});
+    }
+  }catch(e){console.warn('registerPlayer:',e);}
+}
+
+async function saveScore(total,acc){
+  if(!userId){userName=nickInput.value.trim()||'Anonymous';userId='web_'+userName;localStorage.setItem('mms_nick',userName);}
+  try{
+    await addDoc(collection(db,'scores'),{userId,userName,score:total,kills:S.kills,accuracy:acc,bestCombo:S.bestCombo,triples:S.triples,timestamp:Date.now()});
+    await setDoc(doc(db,'meta','counters'),{totalGames:increment(1)},{merge:true});
+  }catch(e){console.warn('saveScore:',e);}
+}
+
+// ═══ LEADERBOARD ═════════════════════════════════════════════════════════════
+const lbScreen=document.getElementById('lbScreen');
+const lbTop=document.getElementById('lbTop');
+const lbMy=document.getElementById('lbMy');
+const lbMyTitle=document.getElementById('lbMyTitle');
+const lbGlobal=document.getElementById('lbGlobal');
+
+function rankCls(i){return i===0?'rank gold':i===1?'rank silver':i===2?'rank bronze':'rank';}
+function timeAgo(ts){const d=Date.now()-ts;if(d<60000)return 'только что';if(d<3600000)return Math.floor(d/60000)+' мин назад';if(d<86400000)return Math.floor(d/3600000)+' ч назад';return Math.floor(d/86400000)+' дн назад';}
+
+async function loadLeaderboard(){
+  lbTop.innerHTML='<tr><td colspan="5" style="text-align:center;color:rgba(130,160,220,.4)">Загрузка...</td></tr>';
+  lbMy.innerHTML='';lbMyTitle.style.display='none';lbGlobal.textContent='';
+  try{
+    const topQ=query(collection(db,'scores'),orderBy('score','desc'),limit(15));
+    const topSnap=await getDocs(topQ);
+    let html='<tr><th class="rank">#</th><th>Игрок</th><th>Счёт</th><th>Точность</th><th>Когда</th></tr>';
+    let i=0;
+    topSnap.forEach(d=>{const v=d.data();const me=v.userId===userId?'me':'';html+=`<tr class="${me}"><td class="${rankCls(i)}">${i+1}</td><td>${v.userName}</td><td>${v.score.toLocaleString('ru')}</td><td>${v.accuracy}%</td><td>${timeAgo(v.timestamp)}</td></tr>`;i++;});
+    if(i===0)html+='<tr><td colspan="5" class="lb-empty">Пока нет результатов</td></tr>';
+    lbTop.innerHTML=html;
+
+    if(userId){
+      lbMyTitle.style.display='block';
+      const myQ=query(collection(db,'scores'),where('userId','==',userId),orderBy('timestamp','desc'),limit(5));
+      const mySnap=await getDocs(myQ);
+      let mhtml='<tr><th>Счёт</th><th>Убийства</th><th>Точность</th><th>Combo</th><th>Когда</th></tr>';
+      let j=0;
+      mySnap.forEach(d=>{const v=d.data();mhtml+=`<tr><td>${v.score.toLocaleString('ru')}</td><td>${v.kills}</td><td>${v.accuracy}%</td><td>x${v.bestCombo}</td><td>${timeAgo(v.timestamp)}</td></tr>`;j++;});
+      if(j===0)mhtml+='<tr><td colspan="5" class="lb-empty">Ты ещё не играл</td></tr>';
+      lbMy.innerHTML=mhtml;
+    }
+
+    const cSnap=await getDoc(doc(db,'meta','counters'));
+    if(cSnap.exists()){const c=cSnap.data();lbGlobal.textContent=`Всего игроков: ${c.totalPlayers||0} · Всего игр: ${c.totalGames||0}`;}
+  }catch(e){console.warn('loadLeaderboard:',e);lbTop.innerHTML='<tr><td colspan="5" class="lb-empty">Ошибка загрузки</td></tr>';}
+}
+
+function showLB(){lbScreen.classList.remove('hidden');loadLeaderboard();}
+function hideLB(){lbScreen.classList.add('hidden');}
+document.getElementById('lbBtnStart').addEventListener('click',e=>{e.stopPropagation();showLB();});
+document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagation();showLB();});
+document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
+document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=12,GAME_TIME=120,BT_START=110;
@@ -291,7 +446,7 @@ const startScreen=document.getElementById('startScreen'),goScreen=document.getEl
 
 function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);world.removeBody(b.body);b.alive=false;}bubbles.length=0;for(const p of projectiles){scene.remove(p.mesh);world.removeBody(p.body);}projectiles.length=0;for(const s of shards){scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}shards.length=0;for(const m of meteors){if(m.life>0){scene.remove(m.mesh);world.removeBody(m.body);m.mat.dispose();}}meteors.length=0;for(const d of deadTrails){scene.remove(d.line);d.mat.dispose();d.geo.dispose();}deadTrails.length=0;}
 
-function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
+function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');lbScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
 function announceWave(idx){wIdx=idx;gState='waveAnnounce';announceT=3;const names=['WAVE 1','WAVE 2','FINAL WAVE'];const subs=['Разминка','Золотые цели','Красные бомбы. Берегись метеоритов!'];wvName.textContent=names[idx]||'WAVE';wvSub.textContent=subs[idx]||'';waveAnn.classList.add('show');waveEl.textContent=idx+1;}
 function spawnWave(idx){const w=WAVES[idx];if(!w)return;world.gravity.set(0,w.grav,0);for(let i=0;i<w.normal;i++)spawnBubble('normal');for(let i=0;i<w.gold;i++)spawnBubble('gold');for(let i=0;i<w.red;i++)spawnBubble('red');updateBallCount();}
 const ACC_RANKS=[{min:80,label:'Легенда!'},{min:60,label:'Снайпер!'},{min:40,label:'Хороший стрелок!'},{min:25,label:'Неплохо!'},{min:0,label:'Тренируй прицел!'}];
@@ -316,11 +471,16 @@ function endGame(){
   else{bonusEl.className='go-bonus zero';bonusEl.textContent=`+0 бонус (${acc}% — ${rank.label})`;}
   document.getElementById('goTotal').textContent=`ИТОГО: ${total.toLocaleString('ru')}`;
   document.getElementById('goStats').innerHTML=[['Уничтожено шаров',S.kills],['Выстрелов',S.shots],['Попаданий',S.hits],['Точность',acc+'%'],['Лучший Combo','x'+S.bestCombo],['Triple Kills',S.triples]].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join('');
+  registerPlayer();saveScore(total,acc);
 }
 
 document.addEventListener('mousedown',e=>{if(e.button===0)shoot(e.clientX,e.clientY);});
 document.addEventListener('touchstart',e=>{if(e.touches.length===1){const t=e.touches[0];shoot(t.clientX,t.clientY);}},{passive:true});
-document.getElementById('playBtn').addEventListener('click',e=>{e.stopPropagation();startGame();});
+document.getElementById('playBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!userId){const v=nickInput.value.trim()||'Anonymous';localStorage.setItem('mms_nick',v);userId='web_'+v;userName=v;}
+  startGame();
+});
 document.getElementById('replayBtn').addEventListener('click',e=>{e.stopPropagation();startGame();});
 document.addEventListener('keydown',e=>{if(e.code==='KeyR'&&(gState==='playing'||gState==='bulletTime'))startGame();});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
