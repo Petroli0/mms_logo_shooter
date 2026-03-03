@@ -281,7 +281,7 @@ document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagatio
 document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
 document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
-const GAME_VERSION='1.0.11';
+const GAME_VERSION='1.0.12';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,GAME_TIME=120,BT_START=110;
 var gameVersionEl=document.getElementById('gameVersion');if(gameVersionEl){gameVersionEl.textContent='ver. '+GAME_VERSION;var _tapCount=0,_tapT=0,_debugCooldown=0;function _onVersionTap(){var t=Date.now();if(t<_debugCooldown)return;if(t-_tapT>600)_tapCount=0;_tapT=t;_tapCount++;if(_tapCount>=3){_debugOnPage=true;_tapCount=0;_debugCooldown=t+2000;var dl=document.getElementById('debugLog');if(dl){dl.style.display='block';dl.innerHTML='';}gameVersionEl.textContent='Лог ВКЛ!';setTimeout(function(){gameVersionEl.textContent='ver. '+GAME_VERSION;},2000);if(typeof _log==='function')_log('debug_on',{msg:'лог включён'});}}gameVersionEl.addEventListener('touchstart',function(e){e.preventDefault();_onVersionTap();},{passive:false});gameVersionEl.addEventListener('click',_onVersionTap);}
@@ -299,26 +299,15 @@ const isMobile=/Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent
 const isTG=!!window.Telegram?.WebApp;
 const SHARD_N=isMobile||isTG?8:12;
 
-const renderer=new THREE.WebGLRenderer({antialias:true});
+let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
 renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
 let webglLost=false,paused=false,_ctxCheckFrames=0;
-renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();webglLost=true;paused=true;const el=document.getElementById('contextLostOverlay');el.style.display='flex';
-// #region agent log
-var _ri=renderer.info;fetch('http://127.0.0.1:7305/ingest/4a407548-291a-4561-9bd3-ff9c97f9c7d2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d613e'},body:JSON.stringify({sessionId:'1d613e',location:'index.html:contextlost',message:'webgl_context_lost',data:{gTimer:typeof gTimer!=='undefined'?Math.round(gTimer):0,sceneChildren:scene?scene.children.length:0,geoCount:_ri.memory.geometries,texCount:_ri.memory.textures,programs:_ri.programs?_ri.programs.length:0},timestamp:Date.now()})}).catch(()=>{});
-// #endregion
-});
-renderer.domElement.addEventListener('webglcontextrestored',()=>{
-  webglLost=false;paused=false;
-  document.getElementById('contextLostOverlay').style.display='none';
-  renderer.setSize(innerWidth,innerHeight);
-  composer.setSize(innerWidth,innerHeight);
-});
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){paused=true;return;}
   var gl=renderer.getContext();
-  if(gl&&gl.isContextLost()){webglLost=true;paused=true;document.getElementById('contextLostOverlay').style.display='flex';return;}
+  if(gl&&gl.isContextLost()){if(!tryRecoverWebGL()){webglLost=true;paused=true;document.getElementById('contextLostOverlay').style.display='flex';}return;}
   paused=false;
   renderer.setSize(innerWidth,innerHeight);
   if(bloom)bloom.resolution.set(innerWidth,innerHeight);
@@ -330,7 +319,7 @@ document.addEventListener('visibilitychange',()=>{
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x050510);scene.fog=new THREE.FogExp2(0x050510,.008);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);camera.position.set(0,5,35);
 
-const orbit=new OrbitControls(camera,renderer.domElement);
+let orbit=new OrbitControls(camera,renderer.domElement);
 orbit.enableDamping=true;orbit.dampingFactor=.07;orbit.enablePan=false;orbit.minDistance=10;orbit.maxDistance=60;
 orbit.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.ROTATE};orbit.autoRotate=true;orbit.autoRotateSpeed=.3;
 
@@ -342,8 +331,37 @@ const dl=new THREE.DirectionalLight(0xffffff,1.5);dl.position.set(8,15,10);scene
 scene.add(new THREE.Mesh(new THREE.IcosahedronGeometry(ARENA,2),new THREE.MeshBasicMaterial({color:0x223355,wireframe:true,transparent:true,opacity:.06})));
 
 const useBloom=!isTG;
-const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
-const bloom=useBloom?new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.35,.5,.85):null;if(bloom)composer.addPass(bloom);
+let composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+let bloom=useBloom?new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.35,.5,.85):null;if(bloom)composer.addPass(bloom);
+
+function tryRecoverWebGL(){
+  try{
+    var oldRenderer=renderer,oldCanvas=renderer.domElement,oldComposer=composer;
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth,innerHeight);
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    if(oldComposer&&oldComposer.dispose)oldComposer.dispose();
+    oldRenderer.dispose();oldCanvas.remove();
+    document.body.appendChild(renderer.domElement);
+    composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
+    bloom=useBloom?new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.35,.5,.85):null;if(bloom)composer.addPass(bloom);
+    orbit=new OrbitControls(camera,renderer.domElement);
+    orbit.enableDamping=true;orbit.dampingFactor=.07;orbit.enablePan=false;orbit.minDistance=10;orbit.maxDistance=60;
+    orbit.mouseButtons={LEFT:null,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.ROTATE};orbit.autoRotate=true;orbit.autoRotateSpeed=.3;
+    renderer.domElement.addEventListener('webglcontextlost',onContextLost);
+    renderer.domElement.addEventListener('webglcontextrestored',onContextRestored);
+    orbit.update();composer.render();
+    webglLost=false;paused=false;
+    document.getElementById('contextLostOverlay').style.display='none';
+    return true;
+  }catch(e){return false;}
+}
+function onContextLost(e){e.preventDefault();if(!tryRecoverWebGL()){webglLost=true;paused=true;document.getElementById('contextLostOverlay').style.display='flex';}}
+function onContextRestored(){webglLost=false;paused=false;document.getElementById('contextLostOverlay').style.display='none';renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);}
+renderer.domElement.addEventListener('webglcontextlost',onContextLost);
+renderer.domElement.addEventListener('webglcontextrestored',onContextRestored);
 
 const world=new CANNON.World({gravity:new CANNON.Vec3(0,-1.5,0)});world.broadphase=new CANNON.SAPBroadphase(world);
 const bM=new CANNON.Material('b'),pM=new CANNON.Material('p'),sM=new CANNON.Material('s'),mM=new CANNON.Material('m');
@@ -565,7 +583,7 @@ var _perfTimer=0,_frameCount=0;
 function animate(){
   requestAnimationFrame(animate);
   if(webglLost||paused){clock.getDelta();return;}
-  _ctxCheckFrames++;if(_ctxCheckFrames>=60){_ctxCheckFrames=0;var gl=renderer.getContext();if(gl&&gl.isContextLost()){webglLost=true;document.getElementById('contextLostOverlay').style.display='flex';return;}}
+  _ctxCheckFrames++;if(_ctxCheckFrames>=60){_ctxCheckFrames=0;var gl=renderer.getContext();if(gl&&gl.isContextLost()){if(!tryRecoverWebGL()){webglLost=true;document.getElementById('contextLostOverlay').style.display='flex';}return;}}
   // #region agent log
   _frameCount++;
   var _now=Date.now();
