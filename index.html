@@ -294,6 +294,9 @@ let gState='loading',gTimer=0,wIdx=0,metTimer=3,announceT=0,shakeAmt=0;
 let killTimes=[],score=0,comboN=0,comboT=0;
 const S={shots:0,hits:0,kills:0,bestCombo:0,triples:0};
 
+const isMobile=/Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>0&&innerWidth<900);
+const isTG=!!window.Telegram?.WebApp;
+
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
@@ -334,8 +337,6 @@ const shardGeos=[new THREE.TetrahedronGeometry(1,0),new THREE.OctahedronGeometry
 const meteorGeo=new THREE.DodecahedronGeometry(1,1);
 const boltGeo=(()=>{const g=new THREE.CylinderGeometry(PROJ_R*.6,PROJ_R*.3,.8,6);g.rotateX(Math.PI/2);return g;})();
 const boltMat=new THREE.MeshBasicMaterial({color:0xff4444});
-const isMobile=/Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>0&&innerWidth<900);
-const isTG=!!window.Telegram?.WebApp;
 const MAX_SHARDS=isMobile||isTG?45:80,MAX_TRAILS=isMobile||isTG?18:30,MAX_SHOCKWAVES=isMobile||isTG?8:14,MAX_FLASHES=isMobile||isTG?6:12;
 
 const gV=`varying vec3 vN,vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
