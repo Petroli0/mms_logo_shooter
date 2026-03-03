@@ -301,8 +301,21 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
 renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
-let webglLost=false;
-renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();webglLost=true;const el=document.getElementById('contextLostOverlay');el.style.display='flex';});
+let webglLost=false,paused=false;
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();webglLost=true;paused=true;const el=document.getElementById('contextLostOverlay');el.style.display='flex';});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{
+  webglLost=false;paused=false;
+  document.getElementById('contextLostOverlay').style.display='none';
+  renderer.setSize(innerWidth,innerHeight);
+  composer.setSize(innerWidth,innerHeight);
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){paused=true;}
+  else{
+    paused=false;
+    if(!webglLost){renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);}
+  }
+});
 
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x050510);scene.fog=new THREE.FogExp2(0x050510,.008);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);camera.position.set(0,5,35);
@@ -515,7 +528,7 @@ const clock=new THREE.Clock();
 
 function animate(){
   requestAnimationFrame(animate);
-  if(webglLost)return;
+  if(webglLost||paused){clock.getDelta();return;}
   let dt=Math.min(clock.getDelta(),.05);const t=clock.elapsedTime;orbit.update();
   let ts=1;if(gState==='bulletTime'){ts=.3;bloom.strength=.6;scene.fog.color.lerp(new THREE.Color(0x120828),.05);scene.background.lerp(new THREE.Color(0x0a0420),.05);}else{bloom.strength=.35;if(gState==='playing'){scene.fog.color.lerp(new THREE.Color(0x050510),.08);scene.background.lerp(new THREE.Color(0x050510),.08);}}
   const gdt=dt*ts;
