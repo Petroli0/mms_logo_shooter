@@ -174,12 +174,14 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import * as CANNON from 'cannon-es';
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import {getFirestore,collection,addDoc,doc,setDoc,getDoc,getDocs,query,orderBy,limit,where,increment} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-// ═══ FIREBASE ════════════════════════════════════════════════════════════════
-const fbApp=initializeApp({apiKey:"AIzaSyCM1q9NKfc0GnkwIwS4OQ0XkyLIB7XOMQk",authDomain:"mms-logo-shooter.firebaseapp.com",projectId:"mms-logo-shooter",storageBucket:"mms-logo-shooter.firebasestorage.app",messagingSenderId:"203671063531",appId:"1:203671063531:web:baffac4bd0249d23a227ae"});
-const db=getFirestore(fbApp);
+let db=null,fbFns={};
+(async()=>{try{
+  const {initializeApp}=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+  const fb=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+  const fbApp=initializeApp({apiKey:"AIzaSyCM1q9NKfc0GnkwIwS4OQ0XkyLIB7XOMQk",authDomain:"mms-logo-shooter.firebaseapp.com",projectId:"mms-logo-shooter",storageBucket:"mms-logo-shooter.firebasestorage.app",messagingSenderId:"203671063531",appId:"1:203671063531:web:baffac4bd0249d23a227ae"});
+  db=fb.getFirestore(fbApp);
+  fbFns={collection:fb.collection,addDoc:fb.addDoc,doc:fb.doc,setDoc:fb.setDoc,getDoc:fb.getDoc,getDocs:fb.getDocs,query:fb.query,orderBy:fb.orderBy,limit:fb.limit,where:fb.where,increment:fb.increment};
+}catch(e){console.warn('Firebase init failed:',e);}})();
 
 // ═══ TELEGRAM + AUTH ═════════════════════════════════════════════════════════
 const tg=window.Telegram?.WebApp;
@@ -209,22 +211,25 @@ document.getElementById('nickSave').addEventListener('click',()=>{
 nickInput.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('nickSave').click();});
 
 async function registerPlayer(){
-  if(!userId)return;
+  if(!userId||!db)return;
+  const{doc:d,getDoc:gd,setDoc:sd,increment:inc}=fbFns;
   try{
-    const pRef=doc(db,'players',userId);
-    const snap=await getDoc(pRef);
+    const pRef=d(db,'players',userId);
+    const snap=await gd(pRef);
     if(!snap.exists()){
-      await setDoc(pRef,{name:userName,firstSeen:Date.now()});
-      await setDoc(doc(db,'meta','counters'),{totalPlayers:increment(1)},{merge:true});
+      await sd(pRef,{name:userName,firstSeen:Date.now()});
+      await sd(d(db,'meta','counters'),{totalPlayers:inc(1)},{merge:true});
     }
   }catch(e){console.warn('registerPlayer:',e);}
 }
 
 async function saveScore(total,acc){
   if(!userId){userName=nickInput.value.trim()||'Anonymous';userId='web_'+userName;localStorage.setItem('mms_nick',userName);}
+  if(!db)return;
+  const{collection:col,addDoc:ad,doc:d,setDoc:sd,increment:inc}=fbFns;
   try{
-    await addDoc(collection(db,'scores'),{userId,userName,score:total,kills:S.kills,accuracy:acc,bestCombo:S.bestCombo,triples:S.triples,timestamp:Date.now()});
-    await setDoc(doc(db,'meta','counters'),{totalGames:increment(1)},{merge:true});
+    await ad(col(db,'scores'),{userId,userName,score:total,kills:S.kills,accuracy:acc,bestCombo:S.bestCombo,triples:S.triples,timestamp:Date.now()});
+    await sd(d(db,'meta','counters'),{totalGames:inc(1)},{merge:true});
   }catch(e){console.warn('saveScore:',e);}
 }
 
@@ -241,27 +246,29 @@ function timeAgo(ts){const d=Date.now()-ts;if(d<60000)return 'только чт�
 async function loadLeaderboard(){
   lbTop.innerHTML='<tr><td colspan="5" style="text-align:center;color:rgba(130,160,220,.4)">Загрузка...</td></tr>';
   lbMy.innerHTML='';lbMyTitle.style.display='none';lbGlobal.textContent='';
+  if(!db){lbTop.innerHTML='<tr><td colspan="5" class="lb-empty">Сервер недоступен</td></tr>';return;}
+  const{collection:col,doc:d,getDoc:gd,getDocs:gds,query:q,orderBy:ob,limit:lm,where:wh}=fbFns;
   try{
-    const topQ=query(collection(db,'scores'),orderBy('score','desc'),limit(15));
-    const topSnap=await getDocs(topQ);
+    const topQ=q(col(db,'scores'),ob('score','desc'),lm(15));
+    const topSnap=await gds(topQ);
     let html='<tr><th class="rank">#</th><th>Игрок</th><th>Счёт</th><th>Точность</th><th>Когда</th></tr>';
     let i=0;
-    topSnap.forEach(d=>{const v=d.data();const me=v.userId===userId?'me':'';html+=`<tr class="${me}"><td class="${rankCls(i)}">${i+1}</td><td>${v.userName}</td><td>${v.score.toLocaleString('ru')}</td><td>${v.accuracy}%</td><td>${timeAgo(v.timestamp)}</td></tr>`;i++;});
+    topSnap.forEach(r=>{const v=r.data();const me=v.userId===userId?'me':'';html+=`<tr class="${me}"><td class="${rankCls(i)}">${i+1}</td><td>${v.userName}</td><td>${v.score.toLocaleString('ru')}</td><td>${v.accuracy}%</td><td>${timeAgo(v.timestamp)}</td></tr>`;i++;});
     if(i===0)html+='<tr><td colspan="5" class="lb-empty">Пока нет результатов</td></tr>';
     lbTop.innerHTML=html;
 
     if(userId){
       lbMyTitle.style.display='block';
-      const myQ=query(collection(db,'scores'),where('userId','==',userId),orderBy('timestamp','desc'),limit(5));
-      const mySnap=await getDocs(myQ);
+      const myQ=q(col(db,'scores'),wh('userId','==',userId),ob('timestamp','desc'),lm(5));
+      const mySnap=await gds(myQ);
       let mhtml='<tr><th>Счёт</th><th>Убийства</th><th>Точность</th><th>Combo</th><th>Когда</th></tr>';
       let j=0;
-      mySnap.forEach(d=>{const v=d.data();mhtml+=`<tr><td>${v.score.toLocaleString('ru')}</td><td>${v.kills}</td><td>${v.accuracy}%</td><td>x${v.bestCombo}</td><td>${timeAgo(v.timestamp)}</td></tr>`;j++;});
+      mySnap.forEach(r=>{const v=r.data();mhtml+=`<tr><td>${v.score.toLocaleString('ru')}</td><td>${v.kills}</td><td>${v.accuracy}%</td><td>x${v.bestCombo}</td><td>${timeAgo(v.timestamp)}</td></tr>`;j++;});
       if(j===0)mhtml+='<tr><td colspan="5" class="lb-empty">Ты ещё не играл</td></tr>';
       lbMy.innerHTML=mhtml;
     }
 
-    const cSnap=await getDoc(doc(db,'meta','counters'));
+    const cSnap=await gd(d(db,'meta','counters'));
     if(cSnap.exists()){const c=cSnap.data();lbGlobal.textContent=`Всего игроков: ${c.totalPlayers||0} · Всего игр: ${c.totalGames||0}`;}
   }catch(e){console.warn('loadLeaderboard:',e);lbTop.innerHTML='<tr><td colspan="5" class="lb-empty">Ошибка загрузки</td></tr>';}
 }
