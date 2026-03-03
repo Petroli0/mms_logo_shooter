@@ -26,6 +26,7 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 #startScreen{background:rgba(5,5,16,.85);padding:20px 16px;text-align:center}
 #startScreen .logo{font-size:48px;font-weight:900;letter-spacing:.15em;color:rgba(200,220,255,.95);text-shadow:0 0 40px rgba(80,120,255,.4);margin-bottom:8px}
 #startScreen .sub{font-size:14px;color:rgba(130,160,220,.5);letter-spacing:.2em;margin-bottom:16px}
+.version{font-size:11px;color:rgba(100,130,180,.4);letter-spacing:.08em;margin-top:20px}
 #startScreen .player-info{color:rgba(160,200,255,.7);font-size:14px;margin-bottom:24px}
 #startScreen .player-info b{color:rgba(200,230,255,.95)}
 #nickWrap{margin-bottom:24px;display:flex;gap:8px;justify-content:center;align-items:center}
@@ -84,6 +85,7 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
   #timerBox b{font-size:17px}
   #startScreen .logo{font-size:26px;letter-spacing:.08em}
   #startScreen .sub{font-size:11px;letter-spacing:.12em;margin-bottom:28px}
+  .version{font-size:10px;margin-top:14px}
   .btn{padding:12px 32px;font-size:14px}
   .go-title{font-size:28px}
   .go-base{font-size:16px}
@@ -130,6 +132,7 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
   <div id="nickWrap" style="display:none"><input id="nickInput" placeholder="Введи ник" maxlength="20"><button class="btn-sm" id="nickSave">OK</button></div>
   <div class="btn" id="playBtn">ИГРАТЬ</div>
   <div style="margin-top:16px"><button class="btn-sm" id="lbBtnStart">ЛИДЕРБОРД</button></div>
+  <div class="version" id="gameVersion"></div>
 </div>
 <div class="screen-overlay hidden" id="gameOverScreen">
   <div class="go-title">GAME OVER</div>
@@ -270,8 +273,10 @@ document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagatio
 document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
 document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
+const GAME_VERSION='1.0.1';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=12,GAME_TIME=120,BT_START=110;
+document.getElementById('gameVersion').textContent='ver. '+GAME_VERSION;
 const WAVES=[
   {t:0,dur:40,normal:20,gold:0,red:0,metInt:5,grav:-1.5,spd:3,spawnR:14},
   {t:40,dur:40,normal:20,gold:5,red:0,metInt:3,grav:-2.5,spd:5,spawnR:20},
