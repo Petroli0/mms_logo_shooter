@@ -29,8 +29,12 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 .btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(100,140,255,.4)}
 #gameOverScreen{background:rgba(5,5,16,.88)}
 .go-title{font-size:42px;font-weight:900;color:rgba(255,140,80,.9);text-shadow:0 0 30px rgba(255,100,40,.4);margin-bottom:6px}
-.go-score{font-size:64px;font-weight:900;color:rgba(220,240,255,.95);margin-bottom:4px}
-.go-mult{font-size:16px;color:rgba(160,200,255,.6);margin-bottom:24px}
+.go-base{font-size:22px;color:rgba(180,200,240,.6);margin-bottom:2px}
+.go-score{font-size:64px;font-weight:900;color:rgba(220,240,255,.95);margin-bottom:2px}
+.go-bonus{font-size:16px;margin-bottom:4px;min-height:22px}
+.go-bonus.pos{color:rgba(100,255,160,.85)}
+.go-bonus.zero{color:rgba(180,180,200,.45)}
+.go-total{font-size:16px;color:rgba(160,200,255,.6);margin-bottom:24px;border-top:1px solid rgba(100,140,220,.15);padding-top:8px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 32px;margin-bottom:32px}
 .stat-row{display:flex;justify-content:space-between;gap:16px;padding:4px 0;border-bottom:1px solid rgba(100,140,220,.1)}
 .stat-label{color:rgba(140,170,220,.6);font-size:13px}
@@ -40,6 +44,15 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 #loading .title{color:rgba(130,160,220,.7);font-size:14px;font-weight:600;letter-spacing:.3em;margin-bottom:16px}
 #loading .bar{width:200px;height:3px;background:rgba(60,80,130,.3);border-radius:2px;overflow:hidden}
 #loading .fill{height:100%;width:0%;background:linear-gradient(90deg,#4466ff,#aa66ff);border-radius:2px;transition:width .15s}
+#btOverlay{position:fixed;inset:0;pointer-events:none;z-index:14;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at center,transparent 40%,rgba(30,10,60,.45) 100%)}
+#btOverlay.show{opacity:1;animation:btPulse 2s ease-in-out infinite}
+@keyframes btPulse{0%,100%{opacity:.7}50%{opacity:1}}
+#timerBox.bt b{color:rgba(255,80,80,.95);animation:timerPulse 1s ease-in-out infinite}
+@keyframes timerPulse{0%,100%{text-shadow:0 0 6px rgba(255,60,60,.3)}50%{text-shadow:0 0 18px rgba(255,60,60,.7)}}
+#btAnnounce{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:26;opacity:0;transition:opacity .5s}
+#btAnnounce.show{opacity:1}
+#btAnnounce .bt-text{font-size:56px;font-weight:900;letter-spacing:.18em;color:rgba(180,140,255,.9);text-shadow:0 0 50px rgba(140,80,255,.6),0 0 100px rgba(100,40,255,.3)}
+#btAnnounce .bt-sub{font-size:15px;color:rgba(160,140,220,.5);letter-spacing:.1em;margin-top:8px;text-align:center}
 .dmg{position:fixed;pointer-events:none;z-index:20;font-weight:800;text-shadow:0 0 8px currentColor;transition:transform .8s ease-out,opacity .8s ease-out}
 .dmg.fade{transform:translateY(-36px)!important;opacity:0}
 .dmg.hit{color:#ff6644;font-size:20px}
@@ -62,7 +75,9 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 <div id="waveAnnounce"><div><div class="wtitle" id="waveName"></div><div class="wsub" id="waveSub"></div></div></div>
 <div id="loading"><div class="title">ЗАГРУЗКА</div><div class="bar"><div class="fill" id="loadFill"></div></div></div>
 <div class="screen-overlay" id="startScreen"><div class="logo">MMS LOGO SHOOTER</div><div class="sub">3D BUBBLE SHOOTER</div><div class="btn" id="playBtn">ИГРАТЬ</div></div>
-<div class="screen-overlay hidden" id="gameOverScreen"><div class="go-title">GAME OVER</div><div class="go-score" id="goScore">0</div><div class="go-mult" id="goMult"></div><div class="stats" id="goStats"></div><div class="btn" id="replayBtn">ИГРАТЬ СНОВА</div></div>
+<div class="screen-overlay hidden" id="gameOverScreen"><div class="go-title">GAME OVER</div><div class="go-base" id="goBase"></div><div class="go-score" id="goScore">0</div><div class="go-bonus" id="goBonus"></div><div class="go-total" id="goTotal"></div><div class="stats" id="goStats"></div><div class="btn" id="replayBtn">ИГРАТЬ СНОВА</div></div>
+<div id="btOverlay"></div>
+<div id="btAnnounce"><div style="text-align:center"><div class="bt-text">BULLET TIME</div><div class="bt-sub">Время замедлено!</div></div></div>
 <div id="hint">ЛКМ — стрелять · ПКМ+тянуть — вращение · Скролл — зум · R — рестарт</div>
 
 <script type="module">
@@ -76,9 +91,9 @@ import * as CANNON from 'cannon-es';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=12,GAME_TIME=120,BT_START=110;
 const WAVES=[
-  {t:0,dur:40,normal:20,gold:0,red:0,metInt:5,grav:-1.5,spd:3},
-  {t:40,dur:40,normal:20,gold:5,red:0,metInt:3,grav:-2.5,spd:5},
-  {t:80,dur:40,normal:20,gold:5,red:3,metInt:1.5,grav:-3,spd:7},
+  {t:0,dur:40,normal:20,gold:0,red:0,metInt:5,grav:-1.5,spd:3,spawnR:14},
+  {t:40,dur:40,normal:20,gold:5,red:0,metInt:3,grav:-2.5,spd:5,spawnR:20},
+  {t:80,dur:40,normal:20,gold:5,red:3,metInt:1.5,grav:-3,spd:7,spawnR:26},
 ];
 
 let gState='loading',gTimer=0,wIdx=0,metTimer=3,announceT=0,shakeAmt=0;
@@ -137,7 +152,8 @@ function spawnBubble(type='normal'){
   const isG=type==='gold',isR=type==='red';
   const r=isG?.9+Math.random()*.3:isR?1.8+Math.random()*.4:1.2+Math.random()*.7;
   const hp=isG?1:isR?5:3,pts=isG?500:isR?300:100;
-  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),dist=4+Math.random()*(ARENA-8);
+  const wc=WAVES[Math.min(wIdx,WAVES.length-1)];
+  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),dist=4+Math.random()*(wc.spawnR-4);
   const x=dist*Math.sin(ph)*Math.cos(th),y=dist*Math.sin(ph)*Math.sin(th),z=dist*Math.cos(ph);
   let hue,color;
   if(isG){hue=.14;color=new THREE.Color().setHSL(.14,.9,.65);}
@@ -247,10 +263,30 @@ const startScreen=document.getElementById('startScreen'),goScreen=document.getEl
 
 function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);world.removeBody(b.body);b.alive=false;}bubbles.length=0;for(const p of projectiles){scene.remove(p.mesh);world.removeBody(p.body);}projectiles.length=0;for(const s of shards){scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}shards.length=0;for(const m of meteors){if(m.life>0){scene.remove(m.mesh);world.removeBody(m.body);m.mat.dispose();}}meteors.length=0;for(const d of deadTrails){scene.remove(d.line);d.mat.dispose();d.geo.dispose();}deadTrails.length=0;}
 
-function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');hudEl.classList.remove('hidden');score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
+function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
 function announceWave(idx){wIdx=idx;gState='waveAnnounce';announceT=3;const names=['WAVE 1','WAVE 2','FINAL WAVE'];const subs=['Разминка','Золотые цели','Красные бомбы. Берегись метеоритов!'];wvName.textContent=names[idx]||'WAVE';wvSub.textContent=subs[idx]||'';waveAnn.classList.add('show');waveEl.textContent=idx+1;}
 function spawnWave(idx){const w=WAVES[idx];if(!w)return;world.gravity.set(0,w.grav,0);for(let i=0;i<w.normal;i++)spawnBubble('normal');for(let i=0;i<w.gold;i++)spawnBubble('gold');for(let i=0;i<w.red;i++)spawnBubble('red');updateBallCount();}
-function endGame(){gState='gameOver';for(const b of[...bubbles])if(b.alive)explode(b,{x:0,y:5,z:0});const acc=S.shots>0?Math.round(S.hits/S.shots*100):0;const mult=Math.max(.5,acc/50);const fs=Math.round(score*mult);goScreen.classList.remove('hidden');document.getElementById('goScore').textContent=fs;document.getElementById('goMult').textContent=`${score} × ${mult.toFixed(1)} (точность ${acc}%) = ${fs}`;document.getElementById('goStats').innerHTML=[['Уничтожено шаров',S.kills],['Выстрелов',S.shots],['Попаданий',S.hits],['Точность',acc+'%'],['Лучший Combo','x'+S.bestCombo],['Triple Kills',S.triples]].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join('');}
+const ACC_TIERS=[{min:80,bonus:1,label:'Легенда!'},{min:60,bonus:.5,label:'Снайпер!'},{min:40,bonus:.25,label:'Хороший стрелок!'},{min:25,bonus:.1,label:'Неплохо!'},{min:0,bonus:0,label:'Тренируй прицел!'}];
+function endGame(){
+  gState='gameOver';
+  document.getElementById('btOverlay').classList.remove('show');
+  document.getElementById('btAnnounce').classList.remove('show');
+  document.getElementById('timerBox').classList.remove('bt');
+  scene.background.set(0x050510);scene.fog.color.set(0x050510);
+  for(const b of[...bubbles])if(b.alive)explode(b,{x:0,y:5,z:0});
+  const acc=S.shots>0?Math.round(S.hits/S.shots*100):0;
+  const tier=ACC_TIERS.find(t=>acc>=t.min);
+  const bonusPts=Math.round(score*tier.bonus);
+  const total=score+bonusPts;
+  goScreen.classList.remove('hidden');
+  document.getElementById('goBase').textContent='Базовый счёт';
+  document.getElementById('goScore').textContent=score.toLocaleString('ru');
+  const bonusEl=document.getElementById('goBonus');
+  if(bonusPts>0){bonusEl.className='go-bonus pos';bonusEl.textContent=`+${bonusPts.toLocaleString('ru')} бонус за точность (${acc}% — ${tier.label})`;}
+  else{bonusEl.className='go-bonus zero';bonusEl.textContent=`+0 бонус за точность (${acc}% — ${tier.label})`;}
+  document.getElementById('goTotal').textContent=`ИТОГО: ${total.toLocaleString('ru')}`;
+  document.getElementById('goStats').innerHTML=[['Уничтожено шаров',S.kills],['Выстрелов',S.shots],['Попаданий',S.hits],['Точность',acc+'%'],['Лучший Combo','x'+S.bestCombo],['Triple Kills',S.triples]].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join('');
+}
 
 document.addEventListener('mousedown',e=>{if(e.button===0)shoot(e.clientX,e.clientY);});
 document.getElementById('playBtn').addEventListener('click',e=>{e.stopPropagation();startGame();});
@@ -263,7 +299,7 @@ const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   let dt=Math.min(clock.getDelta(),.05);const t=clock.elapsedTime;orbit.update();
-  let ts=1;if(gState==='bulletTime'){ts=.3;bloom.strength=.6;}else bloom.strength=.35;
+  let ts=1;if(gState==='bulletTime'){ts=.3;bloom.strength=.6;scene.fog.color.lerp(new THREE.Color(0x120828),.05);scene.background.lerp(new THREE.Color(0x0a0420),.05);}else{bloom.strength=.35;if(gState==='playing'){scene.fog.color.lerp(new THREE.Color(0x050510),.08);scene.background.lerp(new THREE.Color(0x050510),.08);}}
   const gdt=dt*ts;
 
   if(gState==='waveAnnounce'){announceT-=dt;if(announceT<=0){waveAnn.classList.remove('show');spawnWave(wIdx);gState='playing';}}
@@ -271,7 +307,7 @@ function animate(){
   if(gState==='playing'||gState==='bulletTime'){
     gTimer+=gdt;updateTimer();
     if(gState==='playing')for(let i=wIdx+1;i<WAVES.length;i++){if(gTimer>=WAVES[i].t&&wIdx<i){announceWave(i);break;}}
-    if(gTimer>=BT_START&&gState==='playing')gState='bulletTime';
+    if(gTimer>=BT_START&&gState==='playing'){gState='bulletTime';document.getElementById('btOverlay').classList.add('show');document.getElementById('timerBox').classList.add('bt');const bta=document.getElementById('btAnnounce');bta.classList.add('show');setTimeout(()=>bta.classList.remove('show'),2500);}
     if(gTimer>=GAME_TIME){endGame();return;}
     const w=WAVES[Math.min(wIdx,WAVES.length-1)];metTimer-=gdt;if(metTimer<=0){spawnMeteor();metTimer=w.metInt+(Math.random()-.5)*1;}
   }
