@@ -266,7 +266,7 @@ function clearAll(){for(const b of bubbles)if(b.alive){scene.remove(b.group);wor
 function startGame(){startScreen.classList.add('hidden');goScreen.classList.add('hidden');hudEl.classList.remove('hidden');document.getElementById('btOverlay').classList.remove('show');document.getElementById('btAnnounce').classList.remove('show');document.getElementById('timerBox').classList.remove('bt');scene.background.set(0x050510);scene.fog.color.set(0x050510);score=0;gTimer=0;wIdx=0;metTimer=3;comboN=0;comboT=0;killTimes=[];Object.keys(S).forEach(k=>S[k]=0);scoreEl.textContent='0';clearAll();announceWave(0);}
 function announceWave(idx){wIdx=idx;gState='waveAnnounce';announceT=3;const names=['WAVE 1','WAVE 2','FINAL WAVE'];const subs=['Разминка','Золотые цели','Красные бомбы. Берегись метеоритов!'];wvName.textContent=names[idx]||'WAVE';wvSub.textContent=subs[idx]||'';waveAnn.classList.add('show');waveEl.textContent=idx+1;}
 function spawnWave(idx){const w=WAVES[idx];if(!w)return;world.gravity.set(0,w.grav,0);for(let i=0;i<w.normal;i++)spawnBubble('normal');for(let i=0;i<w.gold;i++)spawnBubble('gold');for(let i=0;i<w.red;i++)spawnBubble('red');updateBallCount();}
-const ACC_TIERS=[{min:80,bonus:1,label:'Легенда!'},{min:60,bonus:.5,label:'Снайпер!'},{min:40,bonus:.25,label:'Хороший стрелок!'},{min:25,bonus:.1,label:'Неплохо!'},{min:0,bonus:0,label:'Тренируй прицел!'}];
+const ACC_RANKS=[{min:80,label:'Легенда!'},{min:60,label:'Снайпер!'},{min:40,label:'Хороший стрелок!'},{min:25,label:'Неплохо!'},{min:0,label:'Тренируй прицел!'}];
 function endGame(){
   gState='gameOver';
   document.getElementById('btOverlay').classList.remove('show');
@@ -275,15 +275,17 @@ function endGame(){
   scene.background.set(0x050510);scene.fog.color.set(0x050510);
   for(const b of[...bubbles])if(b.alive)explode(b,{x:0,y:5,z:0});
   const acc=S.shots>0?Math.round(S.hits/S.shots*100):0;
-  const tier=ACC_TIERS.find(t=>acc>=t.min);
-  const bonusPts=Math.round(score*tier.bonus);
+  const bonusMult=Math.pow(acc/100,2);
+  const bonusPct=Math.round(bonusMult*100);
+  const bonusPts=Math.round(score*bonusMult);
   const total=score+bonusPts;
+  const rank=ACC_RANKS.find(t=>acc>=t.min);
   goScreen.classList.remove('hidden');
   document.getElementById('goBase').textContent='Базовый счёт';
   document.getElementById('goScore').textContent=score.toLocaleString('ru');
   const bonusEl=document.getElementById('goBonus');
-  if(bonusPts>0){bonusEl.className='go-bonus pos';bonusEl.textContent=`+${bonusPts.toLocaleString('ru')} бонус за точность (${acc}% — ${tier.label})`;}
-  else{bonusEl.className='go-bonus zero';bonusEl.textContent=`+0 бонус за точность (${acc}% — ${tier.label})`;}
+  if(bonusPts>0){bonusEl.className='go-bonus pos';bonusEl.textContent=`+${bonusPts.toLocaleString('ru')} бонус за точность (${acc}% → +${bonusPct}% — ${rank.label})`;}
+  else{bonusEl.className='go-bonus zero';bonusEl.textContent=`+0 бонус (${acc}% — ${rank.label})`;}
   document.getElementById('goTotal').textContent=`ИТОГО: ${total.toLocaleString('ru')}`;
   document.getElementById('goStats').innerHTML=[['Уничтожено шаров',S.kills],['Выстрелов',S.shots],['Попаданий',S.hits],['Точность',acc+'%'],['Лучший Combo','x'+S.bestCombo],['Triple Kills',S.triples]].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join('');
 }
