@@ -281,7 +281,7 @@ document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagatio
 document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
 document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
-const GAME_VERSION='1.0.5';
+const GAME_VERSION='1.0.6';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
 const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=12,GAME_TIME=120,BT_START=110;
 var gameVersionEl=document.getElementById('gameVersion');if(gameVersionEl){gameVersionEl.textContent='ver. '+GAME_VERSION;var _tapCount=0,_tapT=0,_debugCooldown=0;function _onVersionTap(){var t=Date.now();if(t<_debugCooldown)return;if(t-_tapT>600)_tapCount=0;_tapT=t;_tapCount++;if(_tapCount>=3){_debugOnPage=true;_tapCount=0;_debugCooldown=t+2000;var dl=document.getElementById('debugLog');if(dl){dl.style.display='block';dl.innerHTML='';}gameVersionEl.textContent='Лог ВКЛ!';setTimeout(function(){gameVersionEl.textContent='ver. '+GAME_VERSION;},2000);if(typeof _log==='function')_log('debug_on',{msg:'лог включён'});}}gameVersionEl.addEventListener('touchstart',function(e){e.preventDefault();_onVersionTap();},{passive:false});gameVersionEl.addEventListener('click',_onVersionTap);}
@@ -302,7 +302,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
 renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
-let webglLost=false,paused=false;
+let webglLost=false,paused=false,_ctxCheckFrames=0;
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();webglLost=true;paused=true;const el=document.getElementById('contextLostOverlay');el.style.display='flex';});
 renderer.domElement.addEventListener('webglcontextrestored',()=>{
   webglLost=false;paused=false;
@@ -355,7 +355,7 @@ const shardGeos=[new THREE.TetrahedronGeometry(1,0),new THREE.OctahedronGeometry
 const meteorGeo=new THREE.DodecahedronGeometry(1,1);
 const boltGeo=(()=>{const g=new THREE.CylinderGeometry(PROJ_R*.6,PROJ_R*.3,.8,6);g.rotateX(Math.PI/2);return g;})();
 const boltMat=new THREE.MeshBasicMaterial({color:0xff4444});
-const MAX_SHARDS=isMobile||isTG?45:80,MAX_TRAILS=isMobile||isTG?18:30,MAX_SHOCKWAVES=isMobile||isTG?8:14,MAX_FLASHES=isMobile||isTG?6:12;
+const MAX_SHARDS=isTG?35:isMobile?45:80,MAX_TRAILS=isTG?12:isMobile?18:30,MAX_SHOCKWAVES=isTG?6:isMobile?8:14,MAX_FLASHES=isTG?4:isMobile?6:12;
 
 const gV=`varying vec3 vN,vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
 const gF=`uniform vec3 uC;uniform float uO;varying vec3 vN,vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float r=smoothstep(0.,1.,f);vec3 c=uC+vec3(.5)*r;float a=mix(.03,uO,r);gl_FragColor=vec4(c,a);}`;
@@ -550,6 +550,7 @@ const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   if(webglLost||paused){clock.getDelta();return;}
+  _ctxCheckFrames++;if(_ctxCheckFrames>=60){_ctxCheckFrames=0;var gl=renderer.getContext();if(gl&&gl.isContextLost()){webglLost=true;document.getElementById('contextLostOverlay').style.display='flex';return;}}
   let dt=Math.min(clock.getDelta(),.05);const t=clock.elapsedTime;orbit.update();
   let ts=1;if(gState==='bulletTime'){ts=.3;bloom.strength=.6;scene.fog.color.lerp(new THREE.Color(0x120828),.05);scene.background.lerp(new THREE.Color(0x0a0420),.05);}else{bloom.strength=.35;if(gState==='playing'){scene.fog.color.lerp(new THREE.Color(0x050510),.08);scene.background.lerp(new THREE.Color(0x050510),.08);}}
   const gdt=dt*ts;
