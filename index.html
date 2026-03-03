@@ -15,19 +15,19 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 #timerBox b{font-size:22px;font-variant-numeric:tabular-nums}
 #combo{position:fixed;top:50%;left:50%;transform:translate(-50%,-80px);font-size:38px;font-weight:800;color:rgba(255,180,80,.9);text-shadow:0 0 24px rgba(255,140,40,.6);pointer-events:none;z-index:15;opacity:0;transition:opacity .2s}
 #combo.show{opacity:1}
-#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:rgba(110,145,210,.3);font-size:11px;letter-spacing:.1em;pointer-events:none;white-space:nowrap;z-index:15}
+#hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:rgba(110,145,210,.3);font-size:11px;letter-spacing:.1em;pointer-events:none;white-space:nowrap;z-index:15;max-width:95vw;text-align:center}
 #waveAnnounce{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:25;opacity:0;transition:opacity .4s}
 #waveAnnounce.show{opacity:1}
 #waveAnnounce .wtitle{font-size:52px;font-weight:900;letter-spacing:.12em;color:rgba(200,220,255,.9);text-shadow:0 0 40px rgba(100,150,255,.5);text-align:center}
 #waveAnnounce .wsub{font-size:16px;color:rgba(160,180,220,.6);margin-top:8px;letter-spacing:.08em;text-align:center}
 .screen-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;transition:opacity .5s}
 .screen-overlay.hidden{opacity:0;pointer-events:none}
-#startScreen{background:rgba(5,5,16,.85)}
+#startScreen{background:rgba(5,5,16,.85);padding:20px 16px;text-align:center}
 #startScreen .logo{font-size:48px;font-weight:900;letter-spacing:.15em;color:rgba(200,220,255,.95);text-shadow:0 0 40px rgba(80,120,255,.4);margin-bottom:8px}
 #startScreen .sub{font-size:14px;color:rgba(130,160,220,.5);letter-spacing:.2em;margin-bottom:40px}
 .btn{background:linear-gradient(135deg,rgba(60,90,220,.7),rgba(120,60,220,.7));border:1px solid rgba(140,170,255,.3);border-radius:12px;padding:14px 48px;color:#fff;font-size:16px;font-weight:700;letter-spacing:.12em;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(100,140,255,.4)}
-#gameOverScreen{background:rgba(5,5,16,.88)}
+#gameOverScreen{background:rgba(5,5,16,.88);overflow-y:auto;padding:20px 16px}
 .go-title{font-size:42px;font-weight:900;color:rgba(255,140,80,.9);text-shadow:0 0 30px rgba(255,100,40,.4);margin-bottom:6px}
 .go-base{font-size:22px;color:rgba(180,200,240,.6);margin-bottom:2px}
 .go-score{font-size:64px;font-weight:900;color:rgba(220,240,255,.95);margin-bottom:2px}
@@ -53,6 +53,28 @@ body{overflow:hidden;background:#050510;font-family:-apple-system,BlinkMacSystem
 #btAnnounce.show{opacity:1}
 #btAnnounce .bt-text{font-size:56px;font-weight:900;letter-spacing:.18em;color:rgba(180,140,255,.9);text-shadow:0 0 50px rgba(140,80,255,.6),0 0 100px rgba(100,40,255,.3)}
 #btAnnounce .bt-sub{font-size:15px;color:rgba(160,140,220,.5);letter-spacing:.1em;margin-top:8px;text-align:center}
+@media(max-width:600px){
+  #hud{padding:8px 8px;gap:4px}
+  .hud-box{padding:5px 8px;font-size:11px;border-radius:7px}
+  .hud-box b{font-size:13px}
+  #timerBox b{font-size:17px}
+  #startScreen .logo{font-size:26px;letter-spacing:.08em}
+  #startScreen .sub{font-size:11px;letter-spacing:.12em;margin-bottom:28px}
+  .btn{padding:12px 32px;font-size:14px}
+  .go-title{font-size:28px}
+  .go-base{font-size:16px}
+  .go-score{font-size:40px}
+  .go-bonus{font-size:13px}
+  .go-total{font-size:14px}
+  .stats{grid-template-columns:1fr;gap:4px 0;margin-bottom:20px}
+  #combo{font-size:26px}
+  #hint{font-size:9px;white-space:normal;text-align:center;padding:0 16px;line-height:1.4}
+  #waveAnnounce .wtitle{font-size:32px;letter-spacing:.08em}
+  #waveAnnounce .wsub{font-size:13px}
+  #btAnnounce .bt-text{font-size:32px;letter-spacing:.1em}
+  #btAnnounce .bt-sub{font-size:12px}
+  .dmg.hit{font-size:16px}.dmg.kill{font-size:20px}.dmg.triple{font-size:22px}.dmg.waveclear{font-size:20px}.dmg.meteor{font-size:18px}
+}
 .dmg{position:fixed;pointer-events:none;z-index:20;font-weight:800;text-shadow:0 0 8px currentColor;transition:transform .8s ease-out,opacity .8s ease-out}
 .dmg.fade{transform:translateY(-36px)!important;opacity:0}
 .dmg.hit{color:#ff6644;font-size:20px}
@@ -136,6 +158,9 @@ function loadTex(){return new Promise(res=>{FOLDERS.forEach((f,i)=>{const img=ne
 const sphereGeo=new THREE.SphereGeometry(1,48,24);
 const shardGeos=[new THREE.TetrahedronGeometry(1,0),new THREE.OctahedronGeometry(1,0),new THREE.DodecahedronGeometry(.8,0)];
 const meteorGeo=new THREE.DodecahedronGeometry(1,1);
+const boltGeo=(()=>{const g=new THREE.CylinderGeometry(PROJ_R*.6,PROJ_R*.3,.8,6);g.rotateX(Math.PI/2);return g;})();
+const boltMat=new THREE.MeshBasicMaterial({color:0xff4444});
+const MAX_SHARDS=80,MAX_TRAILS=30;
 
 const gV=`varying vec3 vN,vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
 const gF=`uniform vec3 uC;uniform float uO;varying vec3 vN,vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float r=smoothstep(0.,1.,f);vec3 c=uC+vec3(.5)*r;float a=mix(.03,uO,r);gl_FragColor=vec4(c,a);}`;
@@ -197,7 +222,9 @@ function chainReact(src){
 function explode(b,hv){
   const pos=b.group.position.clone();const r=b.r;b.alive=false;scene.remove(b.group);world.removeBody(b.body);
   popup(b,'kill','+'+b.pts);updateBallCount();
-  for(let i=0;i<SHARD_N;i++){const sr=r*(.15+Math.random()*.25);const geo=shardGeos[Math.floor(Math.random()*shardGeos.length)];const mat=new THREE.MeshStandardMaterial({color:b.color.clone().offsetHSL(Math.random()*.1-.05,0,Math.random()*.2-.1),roughness:.3,metalness:.2,transparent:true,opacity:.85,emissive:b.color.clone(),emissiveIntensity:2});const mesh=new THREE.Mesh(geo,mat);mesh.scale.setScalar(sr);mesh.position.copy(pos);scene.add(mesh);const dir=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize();const speed=8+Math.random()*14;const body=new CANNON.Body({mass:sr*sr*.5,shape:new CANNON.Sphere(sr*.6),position:new CANNON.Vec3(pos.x,pos.y,pos.z),material:sM,linearDamping:.15,angularDamping:.3});body.velocity.set(dir.x*speed+(hv?hv.x*.25:0),dir.y*speed+(hv?hv.y*.25:0),dir.z*speed+(hv?hv.z*.25:0));body.angularVelocity.set((Math.random()-.5)*15,(Math.random()-.5)*15,(Math.random()-.5)*15);world.addBody(body);shards.push({mesh,body,life:2.5+Math.random()*1.5,mat});}
+  const shardCount=Math.min(SHARD_N,Math.max(4,MAX_SHARDS-shards.length));
+  for(let i=0;i<shardCount;i++){const sr=r*(.15+Math.random()*.25);const geo=shardGeos[Math.floor(Math.random()*shardGeos.length)];const mat=new THREE.MeshStandardMaterial({color:b.color.clone().offsetHSL(Math.random()*.1-.05,0,Math.random()*.2-.1),roughness:.3,metalness:.2,transparent:true,opacity:.85,emissive:b.color.clone(),emissiveIntensity:2});const mesh=new THREE.Mesh(geo,mat);mesh.scale.setScalar(sr);mesh.position.copy(pos);scene.add(mesh);const dir=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize();const speed=8+Math.random()*14;const body=new CANNON.Body({mass:sr*sr*.5,shape:new CANNON.Sphere(sr*.6),position:new CANNON.Vec3(pos.x,pos.y,pos.z),material:sM,linearDamping:.15,angularDamping:.3});body.velocity.set(dir.x*speed+(hv?hv.x*.25:0),dir.y*speed+(hv?hv.y*.25:0),dir.z*speed+(hv?hv.z*.25:0));body.angularVelocity.set((Math.random()-.5)*15,(Math.random()-.5)*15,(Math.random()-.5)*15);world.addBody(body);shards.push({mesh,body,life:2.5+Math.random()*1.5,mat});}
+  while(shards.length>MAX_SHARDS){const s=shards.shift();scene.remove(s.mesh);world.removeBody(s.body);s.mat.dispose();}
   const sg=new THREE.RingGeometry(.1,.3,48);const sm=new THREE.MeshBasicMaterial({color:b.color,transparent:true,opacity:.7,side:THREE.DoubleSide});const smesh=new THREE.Mesh(sg,sm);smesh.position.copy(pos);smesh.lookAt(camera.position);scene.add(smesh);shockwaves.push({mesh:smesh,mat:sm,geo:sg,maxR:r*3,t:0});
   const fl=new THREE.PointLight(b.color,15,25);fl.position.copy(pos);scene.add(fl);flashes.push({l:fl,life:.4});
   for(const ob of bubbles){if(!ob.alive||ob===b)continue;const d=ob.body.position.distanceTo(new CANNON.Vec3(pos.x,pos.y,pos.z));if(d<r*6){const dir=new CANNON.Vec3();ob.body.position.vsub(new CANNON.Vec3(pos.x,pos.y,pos.z),dir);dir.normalize();dir.scale(Math.max(0,1-d/(r*6))*30,dir);ob.body.applyImpulse(dir);}}
@@ -211,9 +238,7 @@ function shoot(mx,my){
   if(gState!=='playing'&&gState!=='bulletTime')return;S.shots++;
   mouseNDC.set((mx/innerWidth)*2-1,-(my/innerHeight)*2+1);raycaster.setFromCamera(mouseNDC,camera);
   const dir=raycaster.ray.direction.clone().normalize();const pos=camera.position.clone().add(dir.clone().multiplyScalar(2));
-  const bg=new THREE.CylinderGeometry(PROJ_R*.6,PROJ_R*.3,.8,8);bg.rotateX(Math.PI/2);
-  const mesh=new THREE.Mesh(bg,new THREE.MeshBasicMaterial({color:0xff4444}));mesh.position.copy(pos);mesh.lookAt(pos.clone().add(dir));scene.add(mesh);
-  mesh.add(new THREE.PointLight(0xff4422,4,8));
+  const mesh=new THREE.Mesh(boltGeo,boltMat);mesh.position.copy(pos);mesh.lookAt(pos.clone().add(dir));scene.add(mesh);
   const body=new CANNON.Body({mass:PROJ_MASS,shape:new CANNON.Sphere(PROJ_R),position:new CANNON.Vec3(pos.x,pos.y,pos.z),material:pM,collisionResponse:false});
   const vel=dir.clone().multiplyScalar(PROJ_SPEED);body.velocity.set(vel.x,vel.y,vel.z);world.addBody(body);
   projectiles.push({mesh,body,life:4,dir:dir.clone(),prevPos:pos.clone()});
@@ -241,7 +266,10 @@ function hitMeteor(m){
   const fl=new THREE.PointLight(0xff6600,20,30);fl.position.copy(pos);scene.add(fl);flashes.push({l:fl,life:.5});
 }
 
-function spawnDeadTrail(p){const from=new THREE.Vector3().copy(p.prevPos);const to=new THREE.Vector3(p.body.position.x,p.body.position.y,p.body.position.z);const geo=new THREE.BufferGeometry().setFromPoints([from,to]);const mat=new THREE.LineBasicMaterial({color:0xff5533,transparent:true,opacity:.5,blending:THREE.AdditiveBlending});const line=new THREE.Line(geo,mat);scene.add(line);deadTrails.push({line,mat,geo,life:1});}
+function spawnDeadTrail(p){
+  while(deadTrails.length>=MAX_TRAILS){const d=deadTrails.shift();scene.remove(d.line);d.mat.dispose();d.geo.dispose();}
+  const from=new THREE.Vector3().copy(p.prevPos);const to=new THREE.Vector3(p.body.position.x,p.body.position.y,p.body.position.z);const geo=new THREE.BufferGeometry().setFromPoints([from,to]);const mat=new THREE.LineBasicMaterial({color:0xff5533,transparent:true,opacity:.5,blending:THREE.AdditiveBlending});const line=new THREE.Line(geo,mat);scene.add(line);deadTrails.push({line,mat,geo,life:1});
+}
 
 const maxP=50*49/2;const lBuf=new Float32Array(maxP*6);const lGeo=new THREE.BufferGeometry();lGeo.setAttribute('position',new THREE.BufferAttribute(lBuf,3));scene.add(new THREE.LineSegments(lGeo,new THREE.LineBasicMaterial({color:0x5577aa,transparent:true,opacity:.14})));
 function updateLines(){let vi=0;const alive=bubbles.filter(b=>b.alive);for(let i=0;i<alive.length;i++)for(let j=i+1;j<alive.length;j++){const d=alive[i].group.position.distanceTo(alive[j].group.position);if(d<6){const a=alive[i].group.position,b=alive[j].group.position;lBuf[vi++]=a.x;lBuf[vi++]=a.y;lBuf[vi++]=a.z;lBuf[vi++]=b.x;lBuf[vi++]=b.y;lBuf[vi++]=b.z;}}lGeo.setDrawRange(0,vi/3);lGeo.attributes.position.needsUpdate=true;}
@@ -291,6 +319,7 @@ function endGame(){
 }
 
 document.addEventListener('mousedown',e=>{if(e.button===0)shoot(e.clientX,e.clientY);});
+document.addEventListener('touchstart',e=>{if(e.touches.length===1){const t=e.touches[0];shoot(t.clientX,t.clientY);}},{passive:true});
 document.getElementById('playBtn').addEventListener('click',e=>{e.stopPropagation();startGame();});
 document.getElementById('replayBtn').addEventListener('click',e=>{e.stopPropagation();startGame();});
 document.addEventListener('keydown',e=>{if(e.code==='KeyR'&&(gState==='playing'||gState==='bulletTime'))startGame();});
