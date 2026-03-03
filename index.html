@@ -281,9 +281,9 @@ document.getElementById('lbBtnGO').addEventListener('click',e=>{e.stopPropagatio
 document.getElementById('lbRefresh').addEventListener('click',()=>loadLeaderboard());
 document.getElementById('lbClose').addEventListener('click',()=>hideLB());
 
-const GAME_VERSION='1.0.10';
+const GAME_VERSION='1.0.11';
 const FOLDERS=['m-logo','i-delivery','i-device','i-education','i-factory','i-gear','i-like','i-mri','i-request','i-sale','i-service','i-solution','i-testing','i-time','likeford'];
-const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,SHARD_N=isMobile||isTG?8:12,GAME_TIME=120,BT_START=110;
+const ARENA=28,PROJ_SPEED=60,PROJ_R=.18,PROJ_MASS=1.5,GAME_TIME=120,BT_START=110;
 var gameVersionEl=document.getElementById('gameVersion');if(gameVersionEl){gameVersionEl.textContent='ver. '+GAME_VERSION;var _tapCount=0,_tapT=0,_debugCooldown=0;function _onVersionTap(){var t=Date.now();if(t<_debugCooldown)return;if(t-_tapT>600)_tapCount=0;_tapT=t;_tapCount++;if(_tapCount>=3){_debugOnPage=true;_tapCount=0;_debugCooldown=t+2000;var dl=document.getElementById('debugLog');if(dl){dl.style.display='block';dl.innerHTML='';}gameVersionEl.textContent='Лог ВКЛ!';setTimeout(function(){gameVersionEl.textContent='ver. '+GAME_VERSION;},2000);if(typeof _log==='function')_log('debug_on',{msg:'лог включён'});}}gameVersionEl.addEventListener('touchstart',function(e){e.preventDefault();_onVersionTap();},{passive:false});gameVersionEl.addEventListener('click',_onVersionTap);}
 const WAVES=[
   {t:0,dur:40,normal:20,gold:0,red:0,metInt:5,grav:-1.5,spd:3,spawnR:14},
@@ -297,6 +297,7 @@ const S={shots:0,hits:0,kills:0,bestCombo:0,triples:0};
 
 const isMobile=/Android|webOS|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.maxTouchPoints>0&&innerWidth<900);
 const isTG=!!window.Telegram?.WebApp;
+const SHARD_N=isMobile||isTG?8:12;
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(isMobile||isTG?Math.min(devicePixelRatio,1.5):Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
